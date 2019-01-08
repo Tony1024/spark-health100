@@ -28,7 +28,7 @@ object BizRegCustomer {
       if (mode.equals("create")) {
         // 创建
         ss.sql("create table " + targetTable + " as " +
-          "select now() as clean_date,bz_sfzhm as id_card,if(bz_bm1 is not null,bz_bm1,bz_bm2) as department," +
+          "select date_format(current_timestamp(),'yyyy-MM-dd HH:mm:ss') as clean_date,bz_sfzhm as id_card,if(bz_bm1 is not null,bz_bm1,bz_bm2) as department," +
           "dwdm as company_code,vid,cid,cust_name as name,cust_xb as sex,cust_csrq as birth_date,cust_zy as job," +
           "cust_gzhy as job_industry,yysj as book_time,yydjr as book_person,yydjsj as book_reg_time," +
           "jjzh as shop_no,status,qtdjr as other_reg_person,qtdjsj as other_reg_time,tjsj as body_check_time," +
@@ -37,7 +37,7 @@ object BizRegCustomer {
       } else if (mode.equals("insert")) {
         // 增量写法
         ss.sql("insert into table " + targetTable + " " +
-          "select now() as clean_date,bz_sfzhm as id_card,if(bz_bm1 is not null,bz_bm1,bz_bm2) as department," +
+          "select date_format(current_timestamp(),'yyyy-MM-dd HH:mm:ss') as clean_date,bz_sfzhm as id_card,if(bz_bm1 is not null,bz_bm1,bz_bm2) as department," +
           "dwdm as company_code,vid,cid,cust_name as name,cust_xb as sex,cust_csrq as birth_date,cust_zy as job," +
           "cust_gzhy as job_industry,yysj as book_time,yydjr as book_person,yydjsj as book_reg_time," +
           "jjzh as shop_no,status,qtdjr as other_reg_person,qtdjsj as other_reg_time,tjsj as body_check_time," +

@@ -5,9 +5,9 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
 
 /**
-  * 检查数据清洗程序
+  * 检验数据清洗程序
   */
-object PacsCheckResult {
+object LisTestResult {
 
   def main(args: Array[String]): Unit = {
     if (args.length != 2) {
@@ -34,7 +34,6 @@ object PacsCheckResult {
         // 创建
         ss.sql("use health100_source")
         ss.sql("create table " + targetTable + " as " +
-          "select *,date_format(book_time,'yyyy-MM-dd') as period from (" +
           "select x.vid,x.cid,x.item_id,x.field_comment as item_name,x.field_results as results,x.zcz_xx as normal_l," +
           "x.zcz_sx as normal_h,x.dw as unit,x.init_results as init_result,x.in_factory,x.op_datetime as create_time," +
           "y.init_result_comm,if(x.yysj is not null,x.yysj,'1970-01-01 08:00:00') as book_time," +
@@ -43,12 +42,10 @@ object PacsCheckResult {
           "(SELECT b.vid,b.cid,b.item_id,b.field_comment,b.field_results,b.zcz_xx,b.zcz_sx,b.dw,b.init_results,b.in_factory,b.op_datetime,v.yysj FROM jj_comm_jc_result201808 b LEFT JOIN view_yyqkb v ON b.vid = v.vid) x " +
           "left join init_result_dist y on x.init_results = y.init_result " +
           "left join check_item_dist z on x.field_comment = z.field_comment " +
-          "left join unit_dist w on x.dw = w.unit" +
-          ") src")
+          "left join unit_dist w on x.dw = w.unit")
       } else if (mode.equals("insert")) {
         // 增量写法
         ss.sql("insert into table " + targetTable + " " +
-          "select *,date_format(book_time,'yyyy-MM-dd') as period from (" +
           "select x.vid,x.cid,x.item_id,x.field_comment as item_name,x.field_results as results,x.zcz_xx as normal_l," +
           "x.zcz_sx as normal_h,x.dw as unit,x.init_results as init_result,x.in_factory,x.op_datetime as create_time," +
           "y.init_result_comm,if(x.yysj as book_time is not null,x.yysj,'1970-01-01 08:00:00')," +
@@ -57,8 +54,7 @@ object PacsCheckResult {
           "(SELECT b.vid,b.cid,b.item_id,b.field_comment,b.field_results,b.zcz_xx,b.zcz_sx,b.dw,b.init_results,b.in_factory,b.op_datetime,v.yysj FROM jj_comm_jc_result201808 b LEFT JOIN view_yyqkb v ON b.vid = v.vid) x " +
           "left join init_result_dist y on x.init_results = y.init_result " +
           "left join check_item_dist z on x.field_comment = z.field_comment " +
-          "left join unit_dist w on x.dw = w.unit" +
-          ") src")
+          "left join unit_dist w on x.dw = w.unit")
       }
 
       ss.sql("select count(1) from " + targetTable).show()
