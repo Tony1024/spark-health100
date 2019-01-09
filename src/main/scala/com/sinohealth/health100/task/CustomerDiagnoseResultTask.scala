@@ -97,7 +97,15 @@ object CustomerDiagnoseResultTask {
       */
     val time5 = System.currentTimeMillis() / 1000
     logger.info("检验数据【一个异常所有异常的规则】开始计算:")
-
+    val testSql = "insert into table health_customer_diagnose_result " +
+      "select vid,diagnose_id,diagnose_name,0,period,2 from " +
+      "select a.vid,b.id as diagnose_id,a.diagnose_name,0,period,2 from (" +
+      "select vid,period,small_category,diagnose_small as diagnose_name from (" +
+      "select vid,period,max(results_discrete) as result,small_category,diagnose_small from (" +
+      "select a.vid,a.period,a.results_discrete,a.small_category,b.diagnose_small from lis_test_result_201701 a inner join health_diagnose_test_category b on a.small_category = b.small_category where b.type != '特殊'" +
+      ") temp group by vid,small_category,diagnose_small,period" +
+      ") t where t.result = '2') a inner join health_diagnose_test_dist b on a.diagnose_name = b.name"
+    ss.sql(testSql)
     logger.info("检验数据【一个异常所有异常的规则】计算完成，耗时:[{}]", (System.currentTimeMillis() / 1000 - time5))
 
     /**
