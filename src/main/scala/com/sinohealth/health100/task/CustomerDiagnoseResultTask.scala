@@ -39,28 +39,28 @@ object CustomerDiagnoseResultTask {
       "IF(x.results >=140 or y.results >=90,'高血压'," +
       "IF(x.results >=91 and x.results <=140 or y.results >=61 and y.results <=90,'血压正常'," +
       "IF(x.results <=90 or y.results <=60,'低血压',''))))))) as result from" +
-      "(select vid,period,max(results) as results from pacs_check_result_201701 where item_name_comm = '收缩压' and results is not null group by vid,item_name_comm,period) x," +
-      "(select vid,period,max(results) as results from pacs_check_result_201701 where item_name_comm = '舒张压' and results is not null group by vid,item_name_commperiod) y " +
+      "(select vid,period,max(results) as results from pacs_check_result where item_name_comm = '收缩压' and results is not null group by vid,item_name_comm,period) x," +
+      "(select vid,period,max(results) as results from pacs_check_result where item_name_comm = '舒张压' and results is not null group by vid,item_name_comm,period) y " +
       "where x.vid = y.vid) a " +
       "left join health_diagnose_check_dist b on a.result = b.name where a.result != ''"
     ss.sql(bloodSql)
-    logger.info("高血压数据计算完成，耗时:[{}]", (System.currentTimeMillis() / 1000 - time1))
+    logger.info("高血压数据计算完成，耗时:[{}] 秒", (System.currentTimeMillis() / 1000 - time1))
 
     /**
-      * BMI BMI值=体重（kg）÷身高^2（m）
+      * BMI BMI值=体重（kg）÷ 身高的平方（m）
       **/
     val time2 = System.currentTimeMillis() / 1000
     logger.info("BMI数据开始计算:")
     val bmiSql = "insert into table health_customer_diagnose_result " +
       "select a.vid,b.id as diagnose_id,a.result as diagnose_name,0,a.period,3 from " +
       "(select vid,period,IF(bmi < 18.5, '偏瘦',IF(bmi >= 18.5 and bmi <= 23.9, '标准身型', IF(bmi >= 24 and bmi <= 27.9, '超重', '肥胖'))) as result from (" +
-      "select x.vid,x.period,x.results / (y.results * y.results * 0.01 * 0.01) as bmi from" +
+      "select x.vid,x.period,x.results / (y.results * y.results * 0.01 * 0.01) as bmi from " +
       "(select vid,period,max(results) as results from pacs_check_result where item_name_comm = '体重' and results is not null group by vid,item_name_comm,period) x," +
-      "(select vid,period,max(results) as results from pacs_check_result where item_name_comm = '身高' and results is not null group by vid,item_name_comm,period) y" +
-      "where x.vid = y.vid) src) a" +
+      "(select vid,period,max(results) as results from pacs_check_result where item_name_comm = '身高' and results is not null group by vid,item_name_comm,period) y " +
+      "where x.vid = y.vid) src) a " +
       "left join health_diagnose_check_dist b on a.result = b.name"
     ss.sql(bmiSql)
-    logger.info("BMI数据计算完成，耗时:[{}]", (System.currentTimeMillis() / 1000 - time2))
+    logger.info("BMI数据计算完成，耗时:[{}] 秒", (System.currentTimeMillis() / 1000 - time2))
 
     /**
       * 前列腺肿瘤标志物检测异常
@@ -76,9 +76,9 @@ object CustomerDiagnoseResultTask {
       "    (select vid,period,max(results) as results from lis_test_result where items_name_comm = '游离前列腺特异性抗原（F-PSA）/前列腺特异性抗原（PSA）' group by vid,period) b" +
       "    where a.vid = b.vid) src) temp where result != '') x " +
       "left join " +
-      "health_diagnose_test_dist y on x.result = y.small_classify and y.small_category = 'F-PSA/PSA比值'"
+      "health_diagnose_test_dist y on x.result = y.name and y.type = '特殊'"
     ss.sql(sql)
-    logger.info("前列腺肿瘤标志物检测异常 数据计算完成，耗时:[{}]", (System.currentTimeMillis() / 1000 - time3))
+    logger.info("前列腺肿瘤标志物检测异常 数据计算完成，耗时:[{}] 秒", (System.currentTimeMillis() / 1000 - time3))
 
     /**
       * 美年的诊断
@@ -90,7 +90,7 @@ object CustomerDiagnoseResultTask {
       "biz_diagnose_result_detail a " +
       "inner join health_diagnose_origin_dist b on a.diagnose_result_comm = b.name"
     ss.sql(diagnoseSql)
-    logger.info("美年的诊断 数据计算完成，耗时:[{}]", (System.currentTimeMillis() / 1000 - time4))
+    logger.info("美年的诊断 数据计算完成，耗时:[{}] 秒", (System.currentTimeMillis() / 1000 - time4))
 
     /**
       * 检验数据【一个异常所有异常的规则】
@@ -98,15 +98,14 @@ object CustomerDiagnoseResultTask {
     val time5 = System.currentTimeMillis() / 1000
     logger.info("检验数据【一个异常所有异常的规则】开始计算:")
     val testSql = "insert into table health_customer_diagnose_result " +
-      "select vid,diagnose_id,diagnose_name,0,period,2 from " +
       "select a.vid,b.id as diagnose_id,a.diagnose_name,0,period,2 from (" +
       "select vid,period,small_category,diagnose_small as diagnose_name from (" +
       "select vid,period,max(results_discrete) as result,small_category,diagnose_small from (" +
-      "select a.vid,a.period,a.results_discrete,a.small_category,b.diagnose_small from lis_test_result_201701 a inner join health_diagnose_test_category b on a.small_category = b.small_category where b.type != '特殊'" +
+      "select a.vid,a.period,a.results_discrete,a.small_category,b.diagnose_small from lis_test_result a inner join health_diagnose_test_category b on a.small_category = b.small_category where b.type != '特殊'" +
       ") temp group by vid,small_category,diagnose_small,period" +
       ") t where t.result = '2') a inner join health_diagnose_test_dist b on a.diagnose_name = b.name"
     ss.sql(testSql)
-    logger.info("检验数据【一个异常所有异常的规则】计算完成，耗时:[{}]", (System.currentTimeMillis() / 1000 - time5))
+    logger.info("检验数据【一个异常所有异常的规则】计算完成，耗时:[{}] 秒", (System.currentTimeMillis() / 1000 - time5))
 
     /**
       * 检验数据特殊的规则
@@ -138,7 +137,7 @@ object CustomerDiagnoseResultTask {
       ") t "
     ss.sql(notCombinationSql)
 
-    logger.info("检验数据【特殊的规则】数据计算完成，耗时:[{}]", (System.currentTimeMillis() / 1000 - time6))
+    logger.info("检验数据【特殊的规则】数据计算完成，耗时:[{}] 秒", (System.currentTimeMillis() / 1000 - time6))
 
 
   }
