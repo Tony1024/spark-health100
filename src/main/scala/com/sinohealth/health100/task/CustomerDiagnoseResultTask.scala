@@ -29,8 +29,8 @@ object CustomerDiagnoseResultTask {
       */
     val time1 = System.currentTimeMillis() / 1000
     logger.info("高血压数据开始计算:")
-    val bloodSql = "insert into table health_customer_diagnose_result " +
-      "select a.vid,b.id as diagnose_id,a.result as diagnose_name,0,a.period,3 from " +
+    val bloodSql = "insert into table health_customer_diagnose " +
+      "select a.vid,b.id as diagnose_id,a.result as diagnose_name,0,a.period,3,b.part,b.small_classify,b.middle_classify,b.big_classify,b.serverity,b.system,b.sex from " +
       "(select x.vid,x.period," +
       "IF(x.results>=140 and y.results <90,'单纯收缩期高血压'," +
       "IF(x.results >=140 and x.results <=159 or y.results >=90 and y.results <=99,'1级高血压（轻度）'," +
@@ -51,8 +51,8 @@ object CustomerDiagnoseResultTask {
       **/
     val time2 = System.currentTimeMillis() / 1000
     logger.info("BMI数据开始计算:")
-    val bmiSql = "insert into table health_customer_diagnose_result " +
-      "select a.vid,b.id as diagnose_id,a.result as diagnose_name,0,a.period,3 from " +
+    val bmiSql = "insert into table health_customer_diagnose " +
+      "select a.vid,b.id as diagnose_id,a.result as diagnose_name,0,a.period,3,b.part,b.small_classify,b.middle_classify,b.big_classify,b.serverity,b.system,b.sex from " +
       "(select vid,period,IF(bmi < 18.5, '偏瘦',IF(bmi >= 18.5 and bmi <= 23.9, '标准身型', IF(bmi >= 24 and bmi <= 27.9, '超重', '肥胖'))) as result from (" +
       "select x.vid,x.period,x.results / (y.results * y.results * 0.01 * 0.01) as bmi from " +
       "(select vid,period,max(results) as results from pacs_check_result where item_name_comm = '体重' and results is not null group by vid,item_name_comm,period) x," +
@@ -67,8 +67,8 @@ object CustomerDiagnoseResultTask {
       */
     val time3 = System.currentTimeMillis() / 1000
     logger.info("前列腺肿瘤标志物检测异常 数据开始计算:")
-    val sql = "insert into table health_customer_diagnose_result " +
-      "select x.vid,y.id as diagnose_id,x.result as diagnose_name,0,x.period,2 from" +
+    val sql = "insert into table health_customer_diagnose " +
+      "select x.vid,y.id as diagnose_id,x.result as diagnose_name,0,x.period,2,y.part,y.small_classify,y.middle_classify,y.big_classify,y.serverity,y.system,y.sex from" +
       "(select vid,period,result from " +
       "(select vid,period,IF((x >= normal_h and x <= 10 and y >= 0.25) or (x >= normal_h and x <= 10 and y < 0.25 or x > 10) ,'前列腺肿瘤标志物检测异常','') as result from " +
       "    (select a.vid,a.period,a.results as x,a.normal_h,b.results as y from " +
@@ -85,8 +85,8 @@ object CustomerDiagnoseResultTask {
       */
     val time4 = System.currentTimeMillis() / 1000
     logger.info("美年的诊断 数据开始计算:")
-    val diagnoseSql = "insert into table health_customer_diagnose_result " +
-      "select a.vid,b.id as diagnose_id,a.diagnose_result_comm as diagnose_name,0,a.period,1 from " +
+    val diagnoseSql = "insert into table health_customer_diagnose " +
+      "select a.vid,b.id as diagnose_id,a.diagnose_result_comm as diagnose_name,0,a.period,1,b.part,b.small_classify,b.middle_classify,b.big_classify,b.serverity,b.system,b.sex from " +
       "biz_diagnose_result_detail a " +
       "inner join health_diagnose_origin_dist b on a.diagnose_result_comm = b.name"
     ss.sql(diagnoseSql)
@@ -97,8 +97,8 @@ object CustomerDiagnoseResultTask {
       */
     val time5 = System.currentTimeMillis() / 1000
     logger.info("检验数据【一个异常所有异常的规则】开始计算:")
-    val testSql = "insert into table health_customer_diagnose_result " +
-      "select a.vid,b.id as diagnose_id,a.diagnose_name,0,period,2 from (" +
+    val testSql = "insert into table health_customer_diagnose " +
+      "select a.vid,b.id as diagnose_id,a.diagnose_name,0,period,2,b.part,b.small_classify,b.middle_classify,b.big_classify,b.serverity,b.system,b.sex from (" +
       "select vid,period,small_category,diagnose_small as diagnose_name from (" +
       "select vid,period,max(results_discrete) as result,small_category,diagnose_small from (" +
       "select a.vid,a.period,a.results_discrete,a.small_category,b.diagnose_small from lis_test_result a inner join health_diagnose_test_category b on a.small_category = b.small_category where b.type != '特殊'" +
@@ -113,8 +113,8 @@ object CustomerDiagnoseResultTask {
     val time6 = System.currentTimeMillis() / 1000
     logger.info("检验数据【特殊的规则】开始计算:")
     // 组合情况
-    val combinationSql = "insert into table health_customer_diagnose_result " +
-      "select vid,diagnose_id,diagnose_name,0,period,2 from (" +
+    val combinationSql = "insert into table health_customer_diagnose " +
+      "select vid,b.id as diagnose_id,a.diagnose_name,0,period,2,b.part,b.small_classify,b.middle_classify,b.big_classify,b.serverity,b.system,b.sex from (" +
       "select a.vid,a.period,a.diagnose_name,a.item_names,a.result,b.diagnose_id from (" +
       "select vid,period,diagnose_name,concat_ws(',',collect_list(basic)) as item_names,concat_ws(',',collect_list(results_discrete)) as result from " +
       "(" +
@@ -122,11 +122,12 @@ object CustomerDiagnoseResultTask {
       "select a.vid,a.period,a.results_discrete,b.name from lis_test_result a inner join health_test_item_dist b on a.items_name_comm = b.name group by a.vid,a.results_discrete,b.name,a.period" +
       ") a inner join health_diagnose_basis_group b on a.name = b.basic where b.is_combination = 1 order by a.vid asc,b.group_id asc,b.sort desc" +
       ") x group by vid,diagnose_name,period) a inner join health_diagnose_judgement_result b on a.diagnose_name = b.diagnose_name and a.item_names = b.item_names and a.result = b.result" +
-      ") t "
+      ") a " +
+      "inner join health_diagnose_test_dist b on a.diagnose_name = b.name"
     ss.sql(combinationSql)
     // 非组合情况
-    val notCombinationSql = "insert into table health_customer_diagnose_result " +
-      "select vid,diagnose_id,diagnose_name,0,period,2 from (" +
+    val notCombinationSql = "insert into table health_customer_diagnose " +
+      "select vid,b.id as diagnose_id,a.diagnose_name,0,period,2,b.part,b.small_classify,b.middle_classify,b.big_classify,b.serverity,b.system,b.sex from (" +
       "select a.vid,a.period,a.diagnose_name,a.item_names,a.result,b.diagnose_id from (" +
       "select vid,period,diagnose_name,concat_ws(',',collect_list(basic)) as item_names,concat_ws(',',collect_list(results_discrete)) as result from " +
       "(" +
@@ -134,7 +135,8 @@ object CustomerDiagnoseResultTask {
       "select a.vid,a.period,a.results_discrete,b.name from lis_test_result a inner join health_test_item_dist b on a.items_name_comm = b.name group by a.vid,a.results_discrete,b.name,a.period" +
       ") a inner join health_diagnose_basis_group b on a.name = b.basic where b.is_combination = 0 order by a.vid asc,b.group_id asc,b.sort desc" +
       ") x group by vid,diagnose_name,period) a inner join health_diagnose_judgement_result b on a.diagnose_name = b.diagnose_name and a.item_names = b.item_names and a.result = b.result" +
-      ") t "
+      ") a " +
+      "inner join health_diagnose_test_dist b on a.diagnose_name = b.name"
     ss.sql(notCombinationSql)
 
     logger.info("检验数据【特殊的规则】数据计算完成，耗时:[{}] 秒", (System.currentTimeMillis() / 1000 - time6))
